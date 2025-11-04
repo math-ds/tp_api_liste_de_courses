@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Api_liste_TP</title>
+    <link rel="stylesheet" href="style/liste.css" />
+  </head>
+  <body>
+    <h1>Bienvenue sur la liste de vêtements</h1>
+
+    <div id="formulaire">
+      <h2>Ajouter un nouveau vêtement :</h2>
+      <input type="text" id="nom" placeholder="Vêtement" /><br />
+      <input type="text" id="descriptif" placeholder="Descriptif" /><br />
+      <input type="number" id="quantite" placeholder="Quantité" /><br />
+      <button id="submitBtn" onclick="ajouterProduit()">Ajouter</button>
+      <button id="cancelBtn" onclick="annulerEdit()" style="display: none">
+        Annuler
+      </button>
+    </div>
+
+    <hr />
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Quantité</th>
+          <th>Image</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="listeProduits"></tbody>
+    </table>
+
+    <script>
+      function chargerListe() {
+        fetch("http://localhost:3000/produits")
+          .then((response) => response.json())
+          .then((data) => {
+            const tbody = document.getElementById("listeProduits");
+            tbody.innerHTML = "";
+
+            data.forEach((produit) => {
+              const id = produit.id || "";
+              const nom = produit.nom || "";
+              const quantite = produit.quantite ?? "";
+              const descriptif = produit.descriptif || "";
+
+              const imagesConnues = ["tshirt", "pull", "sweat"];
+              let imageHTML = "";
+
+              if (imagesConnues.includes(nom.toLowerCase())) {
+                const imagePath = `/images/${nom.toLowerCase()}.png`;
+                imageHTML = `<img src="${imagePath}" alt="${nom}" />`;
+              }
+
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+          <td>${id}</td>
+          <td>${nom}</td>
+          <td>${quantite}</td>
+          <td>${imageHTML}</td>
+          <td>${descriptif}</td>
+          <td>
+            <button onclick="supprimerProduit(${id})">Supprimer</button>
+            <button onclick="modifierProduit(${id})">Modifier</button>
+          </td>
+        `;
+              tbody.appendChild(tr);
+            });
+          })
+          .catch((err) => console.error("Erreur chargement:", err));
+      }
+
+      let editerId = null;
+
+      function ajouterProduit() {
+        const nom = document.getElementById("nom").value.trim();
+        const descriptif = document.getElementById("descriptif").value.trim();
+        const quantiteVal = document.getElementById("quantite").value;
+        const quantite =
+          quantiteVal === "" ? undefined : parseInt(quantiteVal, 10);
+
+        if (nom === "") {
+          alert("Le nom du vêtement est obligatoire");
+          return;
+        }
+
+        const produit = { nom, descriptif, quantite };
+
+        const url = editerId
+          ? `http://localhost:3000/modifier/${editerId}`
+          : "http://localhost:3000/ajouter";
+
+        const method = editerId ? "PUT" : "POST";
+
+        fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(produit),
+        })
+          .then((res) => res.json())
+          .then(() => {
+            annulerEdit();
+            chargerListe();
+          })
+          .catch((err) => console.error("Erreur:", err));
+      }
+
+      function modifierProduit(id) {
+        fetch("http://localhost:3000/produits")
+          .then((res) => res.json())
+          .then((data) => {
+            const produit = data.find((p) => p.id === id);
+            if (!produit) return alert("Produit introuvable");
+            document.getElementById("nom").value = produit.nom;
+            document.getElementById("descriptif").value =
+              produit.descriptif || "";
+            document.getElementById("quantite").value = produit.quantite || "";
+            editerId = id;
+            document.getElementById("submitBtn").textContent = "Enregistrer";
+            document.getElementById("cancelBtn").style.display = "inline-block";
+          });
+      }
+
+      function annulerEdit() {
+        editerId = null;
+        document.getElementById("nom").value = "";
+        document.getElementById("descriptif").value = "";
+        document.getElementById("quantite").value = "";
+        document.getElementById("submitBtn").textContent = "Ajouter";
+        document.getElementById("cancelBtn").style.display = "none";
+      }
+
+      function supprimerProduit(id) {
+        fetch(`http://localhost:3000/supprimer/${id}`, { method: "DELETE" })
+          .then(() => chargerListe())
+          .catch((err) => console.error("Erreur suppression:", err));
+      }
+
+      window.addEventListener("load", chargerListe);
+    </script>
+  </body>
+</html>

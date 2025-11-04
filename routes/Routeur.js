@@ -5,7 +5,7 @@ const listeCourses = courses.listeCourses;
 const express = require("express");
 const router = express.Router();
 
-router.get("/", (req, res) => {
+router.get("/produits", (req, res) => {
   res.send(listeCourses);
 });
 
